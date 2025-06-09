@@ -1,65 +1,84 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-from yfscreen import Screen
+import requests
+from bs4 import BeautifulSoup
 
 st.set_page_config(page_title="Top Short Interest Stocks", layout="wide")
 st.title("Top US Short Interest Stocks")
 
 @st.cache_data(show_spinner=False)
-def get_yahoo_most_shorted_tickers(limit=50):
-    screen = Screen()
-    df = screen.get_screener(category="most_shorted_stocks", count=limit)
-    tickers = df["symbol"].tolist()
-    st.success(f"✅ Loaded {len(tickers)} tickers from Yahoo Finance Screener")
+def get_marketwatch_tickers():
+    url = "https://www.marketwatch.com/tools/screener/short-interest"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    res = requests.get(url, headers=headers)
+    soup = BeautifulSoup(res.text, "html.parser")
+
+    table = soup.find("table", class_="table table--overflow align--center")
+    tickers = []
+    if table:
+        rows = table.find_all("tr")
+        for row in rows[1:]:  # skip header
+            cols = row.find_all("td")
+            if len(cols) > 1:
+                ticker = cols[0].text.strip().upper()
+                # filter for real ticker patterns (A-Z, 1–5 chars)
+                if ticker.isalpha() and 1 <= len(ticker) <= 5:
+                    tickers.append(ticker)
+        st.success(f"✅ Loaded {len(tickers)} tickers from MarketWatch Screener")
+    else:
+        st.warning("⚠️ Could not locate MarketWatch short-interest table — falling back to static list")
+        tickers = get_static_tickers()
     return tickers
 
+def get_static_tickers():
+    return ["TSLA","AMC","GME","AAPL","NVDA","BBBY","PLTR","BABA",
+            "LCID","RIVN","CVNA","NKLA","BYND","SPCE","AI","ROKU",
+            "COIN","DKNG","FUBO","SOUN","TTOO","UPST","WISH","MARA","RIOT"]
+
 @st.cache_data(show_spinner=False)
-def get_short_interest_data(tickers):
+def get_yahoo_data(tickers):
     rows = []
-    for ticker in tickers:
+    for t in tickers:
         try:
-            info = yf.Ticker(ticker).info
+            info = yf.Ticker(t).info
             spf = info.get("shortPercentOfFloat")
             if spf is not None:
                 rows.append({
-                    "Ticker": ticker,
-                    "Price": f"${info.get('currentPrice', 0):,.2f}",
-                    "Short Ratio": round(info.get("shortRatio", 0), 2),
-                    "% of Float Shorted": round(spf * 100, 2),
-                    "Float Shares": f"{info.get('floatShares', 0):,}",
-                    "Market Cap": f"${info.get('marketCap', 0):,}"
+                    "Ticker": t,
+                    "Price": f"${info.get('currentPrice',0):,.2f}",
+                    "Short Ratio": round(info.get("shortRatio",0),2),
+                    "% Float Shorted": round(spf*100,2),
+                    "Float Shares": f"{info.get('floatShares',0):,}",
+                    "Market Cap": f"${info.get('marketCap',0):,}"
                 })
-        except Exception as e:
-            print(f"Error fetching {ticker}: {e}")
+        except Exception:
+            continue
     return pd.DataFrame(rows)
 
-# Step 1: Load tickers from Yahoo screener
-tickers = get_yahoo_most_shorted_tickers()
+# Main flow
+tickers = get_marketwatch_tickers()
+data = get_yahoo_data(tickers)
 
-# Step 2: Fetch Yahoo Finance data
-data = get_short_interest_data(tickers)
-
-# Step 3: Display
 if data.empty:
-    st.warning("⚠️ No valid short interest data found.")
+    st.warning("⚠️ No valid data from Yahoo Finance for these tickers.")
 else:
-    st.subheader("Top 25 Stocks by % of Float Shorted")
+    st.subheader("Top 25 Stocks by % Float Shorted")
     st.dataframe(data.head(25), use_container_width=True)
     st.download_button("Download CSV", data.to_csv(index=False), "short_interest.csv", "text/csv")
 
-# Step 4: Lookup tool
+# Lookup tool
 st.subheader("Lookup a Specific Ticker")
 ticker_input = st.text_input("Enter ticker:").upper()
 if ticker_input:
     try:
         info = yf.Ticker(ticker_input).info
         st.write({
-            "Price": f"${info.get('currentPrice', 0):,.2f}",
-            "Short Ratio": round(info.get("shortRatio", 0), 2),
-            "% of Float Shorted": round(info.get("shortPercentOfFloat", 0) * 100, 2),
-            "Float Shares": f"{info.get('floatShares', 0):,}",
-            "Market Cap": f"${info.get('marketCap', 0):,}"
+            "Price": f"${info.get('currentPrice',0):,.2f}",
+            "Short Ratio": round(info.get("shortRatio",0),2),
+            "% Float Shorted": round(info.get("shortPercentOfFloat",0)*100,2),
+            "Float Shares": f"{info.get('floatShares',0):,}",
+            "Market Cap": f"${info.get('marketCap',0):,}"
         })
     except Exception as e:
-        st.error(f"Failed to retrieve data: {e}")
+        st.error(f"Failed lookup: {e}")
