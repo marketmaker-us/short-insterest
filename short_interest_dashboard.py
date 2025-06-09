@@ -27,11 +27,11 @@ def get_short_interest_data(tickers):
 
             data.append({
                 "Ticker": ticker,
-                "Price": price,
-                "Short Ratio": short_ratio,
-                "% of Float Shorted": short_percent_float,
-                "Float Shares": float_shares,
-                "Market Cap": market_cap
+                "Price": f"${price:,.2f}" if price else None,
+                "Short Ratio": round(short_ratio, 2) if short_ratio else None,
+                "% of Float Shorted": round(short_percent_float * 100, 2) if short_percent_float else None,
+                "Float Shares": f"{float_shares:,}" if float_shares else None,
+                "Market Cap": f"${market_cap:,}" if market_cap else None
             })
         except:
             pass
@@ -60,11 +60,11 @@ if ticker_input:
     try:
         info = yf.Ticker(ticker_input).info
         st.write({
-            "Price": info.get("currentPrice"),
-            "Short Ratio": info.get("shortRatio"),
-            "% of Float Shorted": info.get("shortPercentOfFloat"),
-            "Float Shares": info.get("floatShares"),
-            "Market Cap": info.get("marketCap")
+            "Price": f"${info.get('currentPrice'):,.2f}" if info.get("currentPrice") else None,
+            "Short Ratio": round(info.get("shortRatio"), 2) if info.get("shortRatio") else None,
+            "% of Float Shorted": round(info.get("shortPercentOfFloat") * 100, 2) if info.get("shortPercentOfFloat") else None,
+            "Float Shares": f"{info.get('floatShares'):,}" if info.get("floatShares") else None,
+            "Market Cap": f"${info.get('marketCap'):,}" if info.get("marketCap") else None
         })
     except:
         st.warning("Could not retrieve data for this ticker.")
