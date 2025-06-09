@@ -23,7 +23,7 @@ def get_high_short_interest_tickers():
             cols = row.find_all("td")
             if len(cols) > 1:
                 ticker = cols[1].text.strip()
-                if ticker.isalpha() and len(ticker) <= 5:
+                if ticker.upper() != "ALL":
                     tickers.append(ticker)
 
         if tickers:
