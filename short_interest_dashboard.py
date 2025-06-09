@@ -1,35 +1,16 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import requests
-from bs4 import BeautifulSoup
 
-st.set_page_config(page_title="Top Short Interest Stocks – Benzinga", layout="wide")
-st.title("Top US Shorted Stocks (Benzinga)")
-
-@st.cache_data(show_spinner=False)
-def get_benzinga_tickers():
-    url = "https://www.benzinga.com/short-interest/most-shorted"
-    headers = {"User-Agent": "Mozilla/5.0"}
-    resp = requests.get(url, headers=headers)
-    soup = BeautifulSoup(resp.text, "html.parser")
-    ticker_rows = soup.select("table tr")
-    tickers = []
-    for row in ticker_rows:
-        cols = row.find_all("td")
-        if cols:
-            ticker = cols[0].get_text(strip=True).upper()
-            if ticker.isalpha() and 1 <= len(ticker) <= 5:
-                tickers.append(ticker)
-    if tickers:
-        st.success(f"✅ Loaded {len(tickers)} tickers from Benzinga")
-    else:
-        st.warning("⚠️ No tickers found on Benzinga — falling back to static.")
-        tickers = get_static_tickers()
-    return tickers
+st.set_page_config(page_title="Top Short Interest Stocks – Static Mode", layout="wide")
+st.title("Top US Shorted Stocks (Static Ticker List)")
 
 def get_static_tickers():
-    return ["TSLA", "AMC", "GME", "AAPL", "NVDA", "BBBY", "PLTR", "BABA"]
+    return [
+        "BON", "CLEU", "DEVS", "IBRX", "AUUD", "HWH", "LUCY", "AIMD",
+        "AIRS", "INM", "KSS", "NCNA", "RILY", "MTEN", "TASK", "ZBIO",
+        "TWG", "WOLF", "RKT", "NIVF"
+    ]
 
 @st.cache_data(show_spinner=False)
 def get_yahoo_data(tickers):
@@ -51,8 +32,8 @@ def get_yahoo_data(tickers):
             continue
     return pd.DataFrame(rows)
 
-# Fetch tickers and data
-tickers = get_benzinga_tickers()
+# Load static tickers
+tickers = get_static_tickers()
 data = get_yahoo_data(tickers)
 
 # Show table
