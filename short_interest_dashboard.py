@@ -60,8 +60,7 @@ else:
     st.download_button("📥 Download CSV", data.to_csv(index=False), "short_interest.csv", "text/csv")
 
 # Lookup tool
-^[st.subheader("Lookup a Specific Ticker")]({"attribution":{"attributableIndex":"0-1"}})
-^[ti = st.text_input("Enter ticker:").upper()]({"attribution":{"attributableIndex":"0-2"}})
+st.subheader("Lookup a Specific Ticker")
 if ti:
     ^[info = yf.Ticker(ti).info]({"attribution":{"attributableIndex":"0-3"}})
     st.write({
