@@ -1,107 +1,59 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import requests
-from bs4 import BeautifulSoup
+from yfscreen import Screen
 from datetime import datetime
 
 st.set_page_config(page_title="Top Short Interest Stocks", layout="wide")
 st.title("Top US Short Interest Stocks")
 
 @st.cache_data(show_spinner=False)
-def get_high_short_interest_tickers():
-    try:
-        url = "https://www.highshortinterest.com/"
-        res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-        soup = BeautifulSoup(res.text, "html.parser")
-
-        table = soup.find("table")
-        rows = table.find_all("tr")[1:]  # skip header
-
-        tickers = []
-        for row in rows:
-            cols = row.find_all("td")
-            if len(cols) > 1:
-                ticker = cols[1].text.strip()
-                if ticker.upper() != "ALL":
-                    tickers.append(ticker)
-
-        if tickers:
-            st.success(f"✅ Loaded {len(tickers)} tickers from HighShortInterest.com")
-            return tickers
-        else:
-            raise Exception("No tickers found in parsed table.")
-    except Exception as e:
-        st.warning("⚠️ Could not load tickers from HighShortInterest.com. Falling back to static list.")
-        return get_static_tickers()
-
-def get_static_tickers():
-    return [
-        "TSLA", "AMC", "GME", "AAPL", "NVDA", "BBBY", "PLTR", "BABA",
-        "LCID", "RIVN", "CVNA", "NKLA", "BYND", "SPCE", "AI", "ROKU", "COIN",
-        "DKNG", "FUBO", "SOUN", "TTOO", "UPST", "WISH", "MARA", "RIOT"
-    ]
+def get_yahoo_most_shorted_tickers(limit=100):
+    scr = Screen()
+    df = scr.get_screener(
+        category="most_shorted_stocks",
+        count=limit
+    )
+    tickers = df["symbol"].tolist()
+    st.success(f"✅ Loaded {len(tickers)} tickers from Yahoo Finance Screener")
+    return tickers
 
 @st.cache_data(show_spinner=False)
 def get_short_interest_data(tickers):
-    data = []
+    rows = []
     for ticker in tickers:
-        try:
-            info = yf.Ticker(ticker).info
-            short_ratio = info.get("shortRatio")
-            float_shares = info.get("floatShares")
-            short_percent_float = info.get("shortPercentOfFloat")
-            market_cap = info.get("marketCap")
-            price = info.get("currentPrice")
+        info = yf.Ticker(ticker).info
+        spf = info.get("shortPercentOfFloat")
+        if spf is not None:
+            rows.append({
+                "Ticker": ticker,
+                "Price": f"${info.get('currentPrice', 0):,.2f}",
+                "Short Ratio": round(info.get("shortRatio", 0), 2),
+                "% of Float Shorted": round(spf * 100, 2),
+                "Float Shares": f"{info.get('floatShares'):,}",
+                "Market Cap": f"${info.get('marketCap', 0):,}"
+            })
+    return pd.DataFrame(rows)
 
-            if short_percent_float is not None:
-                data.append({
-                    "Ticker": ticker,
-                    "Price": f"${price:,.2f}" if price else None,
-                    "Short Ratio": round(short_ratio, 2) if short_ratio else None,
-                    "% of Float Shorted": round(short_percent_float * 100, 2),
-                    "Float Shares": f"{float_shares:,}" if float_shares else None,
-                    "Market Cap": f"${market_cap:,}" if market_cap else None
-                })
-        except Exception as e:
-            print(f"Error fetching {ticker}: {e}")
-            continue
-
-    df = pd.DataFrame(data)
-
-    if df.empty:
-        st.warning("⚠️ No tickers had valid short interest data on Yahoo Finance.")
-
-    return df
-
-# Use highshortinterest.com tickers, fall back to static if needed
-tickers = get_high_short_interest_tickers()
-
-# Fetch and display data
-st.subheader("Top 25 Stocks by % of Float Shorted")
+tickers = get_yahoo_most_shorted_tickers()
 data = get_short_interest_data(tickers)
-st.dataframe(data.head(25), use_container_width=True)
 
-# Optional: Download CSV
-download = st.download_button(
-    label="Download Data as CSV",
-    data=data.to_csv(index=False),
-    file_name="short_interest_data.csv",
-    mime="text/csv"
-)
+if data.empty:
+    st.warning("⚠️ No valid short-interest data found.")
+else:
+    st.subheader("Top Shorted Stocks by % of Float")
+    st.dataframe(data.head(25), use_container_width=True)
+    st.download_button("Download CSV", data.to_csv(index=False), "shorted.csv", "text/csv")
 
-# Optional: Ticker detail viewer
-st.subheader("Lookup a Specific Ticker")
-ticker_input = st.text_input("Enter a ticker symbol (e.g., TSLA):").upper()
+# Ticker lookup
+^[st.subheader("Lookup a Specific Ticker")]({"attribution":{"attributableIndex":"0-4"}})
+^[ticker_input = st.text_input("Enter ticker:").upper()]({"attribution":{"attributableIndex":"0-5"}})
 if ticker_input:
-    try:
-        info = yf.Ticker(ticker_input).info
-        st.write({
-            "Price": f"${info.get('currentPrice'):,.2f}" if info.get("currentPrice") else None,
-            "Short Ratio": round(info.get("shortRatio"), 2) if info.get("shortRatio") else None,
-            "% of Float Shorted": round(info.get("shortPercentOfFloat") * 100, 2) if info.get("shortPercentOfFloat") else None,
-            "Float Shares": f"{info.get('floatShares'):,}" if info.get("floatShares") else None,
-            "Market Cap": f"${info.get('marketCap'):,}" if info.get("marketCap") else None
-        })
-    except:
-        st.warning("Could not retrieve data for this ticker.")
+    ^[info = yf.Ticker(ticker_input).info]({"attribution":{"attributableIndex":"0-6"}})
+    st.write({
+        ^["Price": f"${info.get('currentPrice'):,.2f}",]({"attribution":{"attributableIndex":"0-7"}})
+        ^["Short Ratio": round(info.get("shortRatio"), 2),]({"attribution":{"attributableIndex":"0-8"}})
+        ^["% of Float Shorted": round(info.get("shortPercentOfFloat") * 100, 2),]({"attribution":{"attributableIndex":"0-9"}})
+        ^["Float Shares": f"{info.get('floatShares'):,}",]({"attribution":{"attributableIndex":"0-10"}})
+        ^["Market Cap": f"${info.get('marketCap'):,}"]({"attribution":{"attributableIndex":"0-11"}})
+    })
