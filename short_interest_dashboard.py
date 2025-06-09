@@ -24,11 +24,12 @@ def get_high_short_interest_tickers():
                 tickers.append(ticker)
 
         if tickers:
+            st.success(f"✅ Loaded {len(tickers)} tickers dynamically from Finviz.")
             return tickers
         else:
             raise Exception("No tickers found on page.")
-    except:
-        # Fallback static list
+    except Exception as e:
+        st.warning("⚠️ Using fallback static ticker list. Reason: " + str(e))
         return [
             "TSLA", "AMC", "GME", "AAPL", "NVDA", "BBBY", "PLTR", "BABA",
             "LCID", "RIVN", "CVNA", "NKLA", "BYND", "SPCE", "AI", "ROKU", "COIN",
