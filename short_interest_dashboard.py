@@ -47,7 +47,7 @@ else:
 
 # Ticker lookup
 st.subheader("Lookup a Specific Ticker")
-^[ticker_input = st.text_input("Enter ticker:").upper()]({"attribution":{"attributableIndex":"0-5"}})
+ticker_input = st.text_input("Enter ticker:").upper()
 if ticker_input:
     ^[info = yf.Ticker(ticker_input).info]({"attribution":{"attributableIndex":"0-6"}})
     st.write({
