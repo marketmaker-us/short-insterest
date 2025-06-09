@@ -62,10 +62,16 @@ def get_short_interest_data(tickers):
         except:
             pass
 
-    df = pd.DataFrame(data)
+  df = pd.DataFrame(data)
+
+if "% of Float Shorted" in df.columns:
     df = df.dropna(subset=["% of Float Shorted"])
     df = df.sort_values("% of Float Shorted", ascending=False)
-    return df
+
+if df.empty:
+    st.warning("⚠️ No tickers had valid short interest data on Yahoo Finance.")
+
+return df
 
 # Use dynamic ticker list
 tickers = get_high_short_interest_tickers()
