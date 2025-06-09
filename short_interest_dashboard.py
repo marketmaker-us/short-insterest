@@ -13,45 +13,49 @@ def get_benzinga_tickers():
     headers = {"User-Agent": "Mozilla/5.0"}
     resp = requests.get(url, headers=headers)
     soup = BeautifulSoup(resp.text, "html.parser")
-    # Table rows appear as alternating entries: symbol, %, etc.
     ticker_rows = soup.select("table tr")
     tickers = []
     for row in ticker_rows:
         cols = row.find_all("td")
         if cols:
             ticker = cols[0].get_text(strip=True).upper()
-            if ticker.isalpha():
+            if ticker.isalpha() and 1 <= len(ticker) <= 5:
                 tickers.append(ticker)
     if tickers:
         st.success(f"✅ Loaded {len(tickers)} tickers from Benzinga")
-        return tickers
     else:
         st.warning("⚠️ No tickers found on Benzinga — falling back to static.")
-        return get_static_tickers()
+        tickers = get_static_tickers()
+    return tickers
 
 def get_static_tickers():
-    return ["TSLA","AMC","GME","AAPL","NVDA","BBBY","PLTR","BABA"]
+    return ["TSLA", "AMC", "GME", "AAPL", "NVDA", "BBBY", "PLTR", "BABA"]
 
 @st.cache_data(show_spinner=False)
 def get_yahoo_data(tickers):
     rows = []
     for t in tickers:
-        info = yf.Ticker(t).info
-        spf = info.get("shortPercentOfFloat")
-        if spf is not None:
-            rows.append({
-                "Ticker": t,
-                "Price": f"${info.get('currentPrice',0):,.2f}",
-                "Short Ratio": round(info.get("shortRatio",0),2),
-                "% Float Shorted": round(spf*100,2),
-                "Float Shares": f"{info.get('floatShares',0):,}",
-                "Market Cap": f"${info.get('marketCap',0):,}"
-            })
+        try:
+            info = yf.Ticker(t).info
+            spf = info.get("shortPercentOfFloat")
+            if spf is not None:
+                rows.append({
+                    "Ticker": t,
+                    "Price": f"${info.get('currentPrice', 0):,.2f}",
+                    "Short Ratio": round(info.get("shortRatio", 0), 2),
+                    "% Float Shorted": round(spf * 100, 2),
+                    "Float Shares": f"{info.get('floatShares', 0):,}",
+                    "Market Cap": f"${info.get('marketCap', 0):,}"
+                })
+        except Exception:
+            continue
     return pd.DataFrame(rows)
 
+# Fetch tickers and data
 tickers = get_benzinga_tickers()
 data = get_yahoo_data(tickers)
 
+# Show table
 if data.empty:
     st.warning("⚠️ No valid short interest data found on Yahoo Finance.")
 else:
@@ -61,12 +65,16 @@ else:
 
 # Lookup tool
 st.subheader("Lookup a Specific Ticker")
-if ti:
-    ^[info = yf.Ticker(ti).info]({"attribution":{"attributableIndex":"0-3"}})
-    st.write({
-        ^["Price": f"${info.get('currentPrice',0):,.2f}",]({"attribution":{"attributableIndex":"0-4"}})
-        ^["Short Ratio": round(info.get('shortRatio',0),2),]({"attribution":{"attributableIndex":"0-5"}})
-        ^["% Float Shorted": round(info.get('shortPercentOfFloat',0)*100,2),]({"attribution":{"attributableIndex":"0-6"}})
-        ^["Float Shares": f"{info.get('floatShares',0):,}",]({"attribution":{"attributableIndex":"0-7"}})
-        ^["Market Cap": f"${info.get('marketCap',0):,}"]({"attribution":{"attributableIndex":"0-8"}})
-    })
+ticker_input = st.text_input("Enter ticker:").upper()
+if ticker_input:
+    try:
+        info = yf.Ticker(ticker_input).info
+        st.write({
+            "Price": f"${info.get('currentPrice', 0):,.2f}",
+            "Short Ratio": round(info.get("shortRatio", 0), 2),
+            "% Float Shorted": round(info.get("shortPercentOfFloat", 0) * 100, 2),
+            "Float Shares": f"{info.get('floatShares', 0):,}",
+            "Market Cap": f"${info.get('marketCap', 0):,}"
+        })
+    except Exception as e:
+        st.error(f"Failed lookup: {e}")
