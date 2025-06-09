@@ -1,17 +1,39 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+import requests
+from bs4 import BeautifulSoup
 from datetime import datetime
 
 st.set_page_config(page_title="Top Short Interest Stocks", layout="wide")
-st.title("📊 US Stocks with Highest Short Interest")
+st.title("\ud83d\udcca US Stocks with Highest Short Interest")
 
-# Define a static list of popular tickers (we'll improve this later)
-tickers = [
-    "TSLA", "AMC", "GME", "AAPL", "NVDA", "BBBY", "PLTR", "BABA",
-    "LCID", "RIVN", "CVNA", "NKLA", "BYND", "SPCE", "AI", "ROKU", "COIN",
-    "DKNG", "FUBO", "SOUN", "TTOO", "UPST", "WISH", "MARA", "RIOT"
-]
+@st.cache_data(show_spinner=False)
+def get_high_short_interest_tickers():
+    try:
+        url = "https://finviz.com/screener.ashx?v=111&f=sh_short_o10&o=-shortinterest"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        res = requests.get(url, headers=headers)
+        soup = BeautifulSoup(res.text, "html.parser")
+
+        tickers = []
+        for row in soup.select("table.table-dark tr[valign='top']")[1:]:
+            cols = row.find_all("td")
+            if len(cols) > 1:
+                ticker = cols[1].text.strip()
+                tickers.append(ticker)
+
+        if tickers:
+            return tickers
+        else:
+            raise Exception("No tickers found on page.")
+    except:
+        # Fallback static list
+        return [
+            "TSLA", "AMC", "GME", "AAPL", "NVDA", "BBBY", "PLTR", "BABA",
+            "LCID", "RIVN", "CVNA", "NKLA", "BYND", "SPCE", "AI", "ROKU", "COIN",
+            "DKNG", "FUBO", "SOUN", "TTOO", "UPST", "WISH", "MARA", "RIOT"
+        ]
 
 @st.cache_data(show_spinner=False)
 def get_short_interest_data(tickers):
@@ -37,8 +59,12 @@ def get_short_interest_data(tickers):
             pass
 
     df = pd.DataFrame(data)
+    df = df.dropna(subset=["% of Float Shorted"])
     df = df.sort_values("% of Float Shorted", ascending=False)
     return df
+
+# Use dynamic ticker list
+tickers = get_high_short_interest_tickers()
 
 # Fetch and display data
 st.subheader("Top 25 Stocks by % of Float Shorted")
