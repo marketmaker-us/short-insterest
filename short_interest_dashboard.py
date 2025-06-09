@@ -8,26 +8,22 @@ from datetime import datetime
 st.set_page_config(page_title="Top Short Interest Stocks", layout="wide")
 st.title("Top US Short Interest Stocks")
 
+from finvizfinance.screener.overview import Overview
+
 @st.cache_data(show_spinner=False)
 def get_high_short_interest_tickers():
     try:
-        url = "https://finviz.com/screener.ashx?v=111&f=sh_short_o10&o=-shortinterest"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        res = requests.get(url, headers=headers)
-        soup = BeautifulSoup(res.text, "html.parser")
+        overview = Overview()
+        filters = ['sh_short_o10']  # short float over 10%
+        overview.set_filter(filters=filters, order='-shortinterest')
+        df = overview.screener_view()
 
-        tickers = []
-        for row in soup.select("table.table-dark tr[valign='top']")[1:]:
-            cols = row.find_all("td")
-            if len(cols) > 1:
-                ticker = cols[1].text.strip()
-                tickers.append(ticker)
-
+        tickers = df['Ticker'].tolist()
         if tickers:
             st.success(f"✅ Loaded {len(tickers)} tickers dynamically from Finviz.")
             return tickers
         else:
-            raise Exception("No tickers found on page.")
+            raise Exception("No tickers returned from Finviz screener.")
     except Exception as e:
         st.warning("⚠️ Using fallback static ticker list. Reason: " + str(e))
         return [
