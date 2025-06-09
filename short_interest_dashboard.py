@@ -23,7 +23,8 @@ def get_high_short_interest_tickers():
             cols = row.find_all("td")
             if len(cols) > 1:
                 ticker = cols[1].text.strip()
-                tickers.append(ticker)
+                if ticker.isalpha() and len(ticker) <= 5:
+                    tickers.append(ticker)
 
         if tickers:
             st.success(f"✅ Loaded {len(tickers)} tickers from HighShortInterest.com")
