@@ -51,22 +51,21 @@ def get_short_interest_data(tickers):
             market_cap = info.get("marketCap")
             price = info.get("currentPrice")
 
-            data.append({
-                "Ticker": ticker,
-                "Price": f"${price:,.2f}" if price else None,
-                "Short Ratio": round(short_ratio, 2) if short_ratio else None,
-                "% of Float Shorted": round(short_percent_float * 100, 2) if short_percent_float else None,
-                "Float Shares": f"{float_shares:,}" if float_shares else None,
-                "Market Cap": f"${market_cap:,}" if market_cap else None
-            })
-        except:
-            pass
+            # Only include if short interest is available
+            if short_percent_float is not None:
+                data.append({
+                    "Ticker": ticker,
+                    "Price": f"${price:,.2f}" if price else None,
+                    "Short Ratio": round(short_ratio, 2) if short_ratio else None,
+                    "% of Float Shorted": round(short_percent_float * 100, 2),
+                    "Float Shares": f"{float_shares:,}" if float_shares else None,
+                    "Market Cap": f"${market_cap:,}" if market_cap else None
+                })
+        except Exception as e:
+            print(f"Error fetching {ticker}: {e}")
+            continue
 
     df = pd.DataFrame(data)
-
-    if "% of Float Shorted" in df.columns:
-        df = df.dropna(subset=["% of Float Shorted"])
-        df = df.sort_values("% of Float Shorted", ascending=False)
 
     if df.empty:
         st.warning("⚠️ No tickers had valid short interest data on Yahoo Finance.")
