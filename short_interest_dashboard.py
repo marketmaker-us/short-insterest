@@ -32,12 +32,15 @@ def get_high_short_interest_tickers():
         else:
             raise Exception("No tickers found in parsed table.")
     except Exception as e:
-        st.warning("⚠️ Using fallback static ticker list. Reason: " + str(e))
-        return [
-            "TSLA", "AMC", "GME", "AAPL", "NVDA", "BBBY", "PLTR", "BABA",
-            "LCID", "RIVN", "CVNA", "NKLA", "BYND", "SPCE", "AI", "ROKU", "COIN",
-            "DKNG", "FUBO", "SOUN", "TTOO", "UPST", "WISH", "MARA", "RIOT"
-        ]
+        st.warning("⚠️ Could not load tickers from HighShortInterest.com. Falling back to static list.")
+        return get_static_tickers()
+
+def get_static_tickers():
+    return [
+        "TSLA", "AMC", "GME", "AAPL", "NVDA", "BBBY", "PLTR", "BABA",
+        "LCID", "RIVN", "CVNA", "NKLA", "BYND", "SPCE", "AI", "ROKU", "COIN",
+        "DKNG", "FUBO", "SOUN", "TTOO", "UPST", "WISH", "MARA", "RIOT"
+    ]
 
 @st.cache_data(show_spinner=False)
 def get_short_interest_data(tickers):
@@ -51,7 +54,6 @@ def get_short_interest_data(tickers):
             market_cap = info.get("marketCap")
             price = info.get("currentPrice")
 
-            # Only include if short interest is available
             if short_percent_float is not None:
                 data.append({
                     "Ticker": ticker,
@@ -72,7 +74,7 @@ def get_short_interest_data(tickers):
 
     return df
 
-# Use dynamic ticker list
+# Use highshortinterest.com tickers, fall back to static if needed
 tickers = get_high_short_interest_tickers()
 
 # Fetch and display data
