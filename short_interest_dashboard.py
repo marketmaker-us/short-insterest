@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 
 st.set_page_config(page_title="Top Short Interest Stocks", layout="wide")
-st.title("\ud83d\udcca US Stocks with Highest Short Interest")
+st.title("Top US Short Interest Stocks")
 
 @st.cache_data(show_spinner=False)
 def get_high_short_interest_tickers():
